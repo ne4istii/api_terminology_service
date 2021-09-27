@@ -13,6 +13,14 @@ for app_config in apps.get_app_configs():
             admin.site.unregister(model)
 
 
+class ItemInLine(admin.TabularInline):
+    model = Version.items.through
+    extra = 1
+    min_num = 1
+    verbose_name = 'Элемент справочника'
+    verbose_name_plural = 'Элементы справочника'
+
+
 class VersionInLine(admin.TabularInline):
     model = Version
     extra = 1
@@ -23,6 +31,7 @@ class VersionInLine(admin.TabularInline):
 
 @admin.register(Version)
 class VersionAdmin(admin.ModelAdmin):
+    inlines = (ItemInLine,)
     list_display = ('directory', 'name', 'pub_date')
     search_fields = ('name',)
     list_filter = ('pub_date',)
