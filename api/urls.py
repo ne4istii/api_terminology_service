@@ -1,7 +1,6 @@
 from django.urls import path
 
-from .views import (DirectoryListView, ItemListView, ItemPostView,
-                    VersionItemListView, VersionItemPostView)
+from .views import DirectoryListView, ItemListView, ItemValidateView
 
 urlpatterns = [
     path(
@@ -9,19 +8,19 @@ urlpatterns = [
         DirectoryListView.as_view()
     ),
     path(
-        '<str:dictionary_uid>/',
+        '<str:directory_uid>/',
         ItemListView.as_view()
     ),
     path(
-        '<str:dictionary_uid>/<str:code>/',
-        ItemPostView.as_view()
+        '<str:directory_uid>/<str:code>/',
+        ItemValidateView.as_view()
     ),
     path(
-        '<str:dictionary_uid>/version/<str:dictionary_version>/',
-        VersionItemListView.as_view()
+        '<str:directory_uid>/version/<str:directory_version>/',
+        ItemListView.as_view()
     ),
     path(
-        '<str:dictionary_uid>/version/<str:dictionary_version>/<str:code>/',
-        VersionItemPostView.as_view()
+        '<str:directory_uid>/version/<str:directory_version>/<str:code>/',
+        ItemValidateView.as_view()
     ),
 ]

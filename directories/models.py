@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import models
 
 
@@ -5,7 +7,8 @@ class Item(models.Model):
     uid = models.CharField(
         verbose_name='UID',
         help_text='Укажите UID элемента справочника',
-        max_length=100
+        max_length=100,
+        default=uuid4
     )
     code = models.CharField(
         max_length=50,
@@ -40,7 +43,8 @@ class Directory(models.Model):
         verbose_name='UID',
         help_text='Укажите UID справочника',
         max_length=50,
-        unique=True
+        unique=True,
+        default=uuid4
     )
     name = models.CharField(
         verbose_name='Наименование',

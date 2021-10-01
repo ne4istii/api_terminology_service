@@ -1,5 +1,5 @@
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView, ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 
 from directories.models import Directory, Item, Version
 
@@ -20,107 +20,69 @@ class DirectoryListView(ListAPIView):
 
 class ItemListView(ListAPIView):
     '''
-    Get a list of elements of the directory of the current version.
+    Get a list of directory items:
+    if the version is specified in the request parameters,
+    get all items from the specified version,
+    otherwise - items from the current version.
     '''
     queryset = Item.objects.all()
     serializer_class = ItemGetSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        dictionary_uid = self.kwargs.get('dictionary_uid')
-        actual_dictionary_version = Version.objects.filter(
-            directory__uid=dictionary_uid
-        ).order_by('-pub_date').first()
-        if not actual_dictionary_version:
-            raise ValidationError(
-                'The directory does not exist!'
-            )
-        version_name = actual_dictionary_version.name
-        return queryset.filter(versions__name=version_name)
-
-
-class VersionItemListView(ListAPIView):
-    '''
-    Get a list of directory items for the specified version.
-    '''
-    queryset = Item.objects.all()
-    serializer_class = ItemGetSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        dictionary_uid, dictionary_version = self.kwargs.values()
+        if 'directory_version' in self.kwargs:
+            directory_uid, directory_version = self.kwargs.values()
+        else:
+            directory_uid = self.kwargs.get('directory_uid')
+            actual_directory_version = Version.objects.filter(
+                directory__uid=directory_uid
+            ).order_by('-pub_date').first()
+            if not actual_directory_version:
+                raise ValidationError(
+                    'The directory does not exist!'
+                )
+            directory_version = actual_directory_version.name
         filtered_queryset = queryset.filter(
-            itemsversion__version__name=dictionary_version,
-            itemsversion__version__directory__uid=dictionary_uid
+            versions__name=directory_version,
+            itemsversion__version__directory__uid=directory_uid
         )
         if not filtered_queryset:
             raise ValidationError(
-                'This version of the directory does not exist '
-                'or elements of the directory are missing!'
+                'This version of the directory does not exist!'
             )
         return filtered_queryset
 
 
-class ItemPostView(CreateAPIView):
+class ItemValidateView(RetrieveAPIView):
     '''
-    Validate a directory element of the current version.
+    Validate a directory element:
+    if the version is specified in the request parameters,
+    the item in the specified version is checked,
+    otherwise - the item is in the current version.
     '''
     queryset = Item.objects.all()
     serializer_class = ItemValidateSerializer
 
-    def perform_create(self, serializer):
-        dictionary_uid, item_code = self.kwargs.values()
-        actual_dictionary_version = Version.objects.filter(
-            directory__uid=dictionary_uid
-        ).order_by('-pub_date').first()
-        if not actual_dictionary_version:
-            raise ValidationError(
-                'The directory does not exist!'
-            )
-        version_name = actual_dictionary_version.name
-        directory_version = Item.objects.filter(
+    def get_object(self):
+        if 'directory_version' in self.kwargs:
+            directory_uid, directory_version, item_code = self.kwargs.values()
+            version_name = directory_version
+        else:
+            directory_uid, item_code = self.kwargs.values()
+            directory_version = Version.objects.filter(
+                directory__uid=directory_uid
+            ).order_by('-pub_date').first()
+            if not directory_version:
+                raise ValidationError(
+                    'The directory does not exist!'
+                )
+            version_name = directory_version.name
+        directory_items = Item.objects.filter(
+            itemsversion__version__directory__uid=directory_uid,
             versions__name=version_name,
         )
-        if not directory_version:
-            raise ValidationError(
-                'The directory is missing versions and elements!'
-            )
-        directory_item = directory_version.filter(
-            code=item_code
-        )
-        if directory_item.exists():
-            serializer.validated_data['result'] = True
-        else:
-            serializer.validated_data['result'] = False
-
-
-class VersionItemPostView(CreateAPIView):
-    '''
-    Validate the element of the directory of the current version.
-    '''
-    queryset = Item.objects.all()
-    serializer_class = ItemValidateSerializer
-
-    def perform_create(self, serializer):
-        dictionary_uid, dictionary_version, item_code = self.kwargs.values()
-        directory = Item.objects.filter(
-            itemsversion__version__directory__uid=dictionary_uid,
-        )
-        if not directory:
+        if not directory_items:
             raise ValidationError(
                 'The directory does not exist!'
             )
-        directory_version = directory.filter(
-            itemsversion__version__name=dictionary_version,
-        )
-        if not directory_version:
-            raise ValidationError(
-                'This version of the directory does not exist!'
-            )
-        directory_item = directory_version.filter(
-            code=item_code
-        )
-        if directory_item.exists():
-            serializer.validated_data['result'] = True
-        else:
-            serializer.validated_data['result'] = False
+        return directory_items.filter(code=item_code)

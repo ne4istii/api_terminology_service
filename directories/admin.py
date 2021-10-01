@@ -42,9 +42,16 @@ class VersionAdmin(admin.ModelAdmin):
 @admin.register(Directory)
 class DirectoryAdmin(admin.ModelAdmin):
     inlines = (VersionInLine,)
+    list_display = ('uid', 'name', 'get_versions',)
     search_fields = ('uid', 'name')
     ordering = ('-uid',)
     empty_value_display = '-пусто-'
+
+    def get_versions(self, obj):
+        qs = obj.versions.values_list('name', flat=True)
+        return list(qs)
+
+    get_versions.short_description = 'Версии'
 
 
 @admin.register(Item)
